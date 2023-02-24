@@ -1,20 +1,27 @@
 import discord
 from discord import app_commands
 from discord.ext import commands
-from colorama import Back, Fore, Style
+from colorama import init, Back, Fore, Style
 import cogs.polaco.ponto as ponto
 import cogs.polaco.help_center as help_center
+import cogs.coreano.random_picker as random
 import time
-import platform 
+import platform
+import json
+
+# Colorama
+init(convert=True)
 
 class Client(commands.Bot):
     def __init__(self):
         super().__init__(command_prefix=commands.when_mentioned_or('.'), intents=discord.Intents.all())
-        self.cogslist = ["cogs.coreano.random_picker", "cogs.polaco.help_center"]
+        self.cogslist = ["cogs.coreano.random_picker"]
 
     async def setup_hook(self) -> None:
         self.add_view(ponto.Menu())
         self.add_view(help_center.DropdownView())
+        self.add_view(random.MenuOffline()) # Remover depois
+        self.add_view(random.MenuOnline())
         for ext in self.cogslist:
             await self.load_extension(ext)
 
@@ -44,7 +51,8 @@ async def unloadcog(interaction: discord.Interaction, cog: str):
     await client.unload_extension(cog)
     await interaction.response.send_message(content=f"{cog} descarregado com sucesso.", ephemeral=True)
 
-with open("token.txt", "r") as f:
-    lines = f.readlines()
-    TOKEN = lines[0].strip()
+with open('config.json', 'r') as f:
+    data = json.load(f)
+    TOKEN = data['TOKEN']
+
 client.run(TOKEN)
