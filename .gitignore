@@ -4,4 +4,4 @@ Include/
 __pycache__/
 .idea/
 pyvenv.cfg
-token.txt
+config.json
