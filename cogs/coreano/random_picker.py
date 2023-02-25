@@ -68,9 +68,14 @@ class RandomPicker(commands.Cog):
         await interaction.channel.send(embed=embed, view=MenuOnline())
 
     @app_commands.command(name='picker', description='Iniciar o Random Picker.')
-    async def picker(self, interaction: discord.Interaction):
+    @app_commands.describe(titulo='Título da mensagem', descricao='Descrição da mensagem')
+    async def picker(self, interaction: discord.Interaction, titulo: str = None, descricao: str = None):
         await interaction.response.send_message("Random Picker criado com sucesso.", ephemeral=True)
-        embed = discord.Embed(title='Random Picker', description='Menu Online', color=discord.Color.from_rgb(47, 49, 54))
+        if titulo == "0" or titulo == None:
+            titulo = "Random Picker"
+        if descricao == "0" or descricao == None:
+            descricao = "Clique em Participar para ter a chance de ser escolhido."
+        embed = discord.Embed(title=f'{titulo}'.title(), description=f'{descricao}'.capitalize(), color=discord.Color.from_rgb(47, 49, 54))
         await interaction.channel.send(embed=embed, view=MenuOffline())
     
     @app_commands.command(name='sortear', description="Criará um canal com as pessoas sorteadas.")
