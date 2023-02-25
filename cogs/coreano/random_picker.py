@@ -57,8 +57,13 @@ class MenuOnline(discord.ui.View):
 class RandomPicker(commands.Cog):
     def __init__(self, client:commands.Bot):
         self.client = client
+        #setpicker
+        self.titulo = "Título"
+        self.descricao = "Descrição"
+        #sortear
         self.already = []
         self.auth = 0
+
 
     @app_commands.command(name='setuppicker', description='Setup para o Random Picker.')
     async def setuppicker(self, interaction: discord.Interaction):
@@ -72,18 +77,28 @@ class RandomPicker(commands.Cog):
     async def picker(self, interaction: discord.Interaction, titulo: str = None, descricao: str = None):
         await interaction.response.send_message("Random Picker criado com sucesso.", ephemeral=True)
         if titulo == "0" or titulo == None:
-            titulo = "Random Picker"
+            titulo = self.titulo
         if descricao == "0" or descricao == None:
-            descricao = "Clique em Participar para ter a chance de ser escolhido."
+            descricao = self.descricao
         embed = discord.Embed(title=f'{titulo}'.title(), description=f'{descricao}'.capitalize(), color=discord.Color.from_rgb(47, 49, 54))
         await interaction.channel.send(embed=embed, view=MenuOffline())
-    
+
+    @app_commands.command(name='setpicker', description='Definir opções para o comando Picker')
+    @app_commands.describe(titulo='Definir título padrão', descricao='Definir descrição padrão')
+    async def setpicker(self, interaction: discord.Interaction, titulo: str = None, descricao: str = None):
+        attributes = dict(list(locals().items())[2:])
+        for k, v in attributes.items():
+            if (v) != None:
+                vars(self)[k] = v
+                
+        await interaction.response.send_message(f'Definições padrões atualizadas com sucesso.', ephemeral=True)
+
     @app_commands.command(name='sortear', description="Criará um canal com as pessoas sorteadas.")
     @app_commands.describe(qtd='Quantidade que será sorteada.', key='Chave que será sorteada.')
     async def sortear(self, interaction:discord.Interaction, qtd: int, key: str):
         with open ('cogs/coreano/members.json', 'r') as f:
             data = json.load(f)
-        
+        # Sortear
         chosen = []
         for i in range(0, qtd):
             n = random.randint(0, (len(data)-1))
@@ -96,7 +111,7 @@ class RandomPicker(commands.Cog):
             else:
                 chosen.append(n)
                 self.already.append(n)
-
+        # Mensagens do Sistema
         if qtd == len(data):
             await interaction.response.send_message(f'Quantidade: {len(chosen)}\nChave: {key}',ephemeral=True)
             await interaction.followup.send('Todos participantes sorteados.',ephemeral=True)
