@@ -39,16 +39,19 @@ client = Client()
 @client.tree.command(name="loadcog")
 async def loadcog(interaction: discord.Interaction, cog: str):
     await client.load_extension(cog)
+    await client.tree.sync()
     await interaction.response.send_message(content=f"{cog} carregado com sucesso.", ephemeral=True)
 
 @client.tree.command(name="reloadcog")
 async def reloadcog(interaction: discord.Interaction, cog: str):
     await client.reload_extension(cog)
+    await client.tree.sync()
     await interaction.response.send_message(content=f"{cog} recarregado com sucesso.", ephemeral=True)
 
 @client.tree.command(name="unloadcog")
 async def unloadcog(interaction: discord.Interaction, cog: str):
     await client.unload_extension(cog)
+    await client.tree.sync()
     await interaction.response.send_message(content=f"{cog} descarregado com sucesso.", ephemeral=True)
 
 with open('config.json', 'r') as f:
