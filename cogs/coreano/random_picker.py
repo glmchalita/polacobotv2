@@ -3,6 +3,7 @@ from discord.ext import commands
 from discord import app_commands
 import json
 import random
+import asyncio
 
 class MenuOffline(discord.ui.View):
     def __init__(self):
@@ -89,8 +90,7 @@ class RandomPicker(commands.Cog):
         attributes = dict(list(locals().items())[2:])
         for k, v in attributes.items():
             if (v) != None:
-                vars(self)[k] = v
-                
+                vars(self)[k] = v   
         await interaction.response.send_message(f'Definições padrões atualizadas com sucesso.', ephemeral=True)
 
     @app_commands.command(name='sortear', description="Criará um canal com as pessoas sorteadas.")
@@ -111,8 +111,9 @@ class RandomPicker(commands.Cog):
             else:
                 chosen.append(n)
                 self.already.append(n)
+        #print(f'Chosen: {chosen}\nAlready: {self.already}')
         # Mensagens do Sistema
-        if qtd == len(data):
+        if qtd == len(data) and self.auth == 0:
             await interaction.response.send_message(f'Quantidade: {len(chosen)}\nChave: {key}',ephemeral=True)
             await interaction.followup.send('Todos participantes sorteados.',ephemeral=True)
             self.auth = 1
@@ -124,11 +125,19 @@ class RandomPicker(commands.Cog):
             self.auth = 1
         else:
             await interaction.response.send_message(f'Quantidade: {len(chosen)}\nChave: {key}',ephemeral=True)
-
-            
-        print(f'Chosen: {chosen}\nAlready: {self.already}')
-        for x in chosen:
-            print(data[f'{x}']['member'])
+        # Criação do Canal de Texto
+        thread = await interaction.channel.create_thread(name='sorteio')
+        for c in chosen:
+            user = await interaction.guild.fetch_member(data[f'{c}']['member'])
+            await thread.add_user(user)
+        code = discord.Embed(color=discord.Color.from_rgb(47, 49, 54))
+        code.add_field(name='', value='||CÓDIGO123||')
+        msg = await thread.send('A sala será deletada em 15 segundos',embed=code)
+        await msg.edit(content='A sala será deletada em 15 segundos')
+        for i in range(0, 16):
+            await asyncio.sleep(1)
+            await msg.edit(content=f'A sala será deletada em {15-i} segundos')
+        await thread.delete()
 
 
 
