@@ -131,8 +131,9 @@ class RandomPicker(commands.Cog):
             user = await interaction.guild.fetch_member(data[f'{c}']['member'])
             await thread.add_user(user)
         code = discord.Embed(color=discord.Color.from_rgb(47, 49, 54))
-        code.add_field(name='', value='||CÓDIGO123||')
-        msg = await thread.send('A sala será deletada em 15 segundos',embed=code)
+        code.add_field(name='', value='CÓDIGO123')
+        msg = await thread.send('A sala será deletada em 15 segundos')
+        await thread.send(embed=code)
         await msg.edit(content='A sala será deletada em 15 segundos')
         for i in range(0, 16):
             await asyncio.sleep(1)
