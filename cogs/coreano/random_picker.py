@@ -6,13 +6,16 @@ import random
 import asyncio
 
 class MenuOffline(discord.ui.View):
-    def __init__(self):
+    def __init__(self, titulo, descricao, msg):
         super().__init__(timeout=None)
         self.value = None
         self.members = {}
         self.count = 0
         self.entry = []
-    
+        self.titulo = titulo
+        self.descricao = descricao
+        self.msg = msg
+
     @discord.ui.button(label='Participar', style=discord.ButtonStyle.grey, custom_id='persistent_view:button_participar', emoji="🐸")
     async def participar(self, interaction: discord.Interaction, button: discord.ui.Button):
         if int(interaction.user.id) in self.entry:
@@ -21,6 +24,11 @@ class MenuOffline(discord.ui.View):
             self.members[self.count] = {"member":int(interaction.user.id)}
             self.count = self.count + 1
             self.entry.append(int(interaction.user.id))
+
+            embed = discord.Embed(title=f'{self.titulo}'.title(), description=f'{self.descricao}'.capitalize(), color=discord.Color.from_rgb(47, 49, 54))
+            embed.set_footer(text=f"Participantes: {self.count}")
+            await self.msg.edit(embed=embed)
+
             await interaction.response.send_message('Você entrou pra fila de sorteio.', ephemeral=True)
 
     @discord.ui.button(label='Encerrar', style=discord.ButtonStyle.grey, custom_id='persistent_view:button_encerrar', emoji="❌")
@@ -30,7 +38,6 @@ class MenuOffline(discord.ui.View):
         if "ADM" in str(interaction.user.roles): #Select only one specific role to approve
             await interaction.response.defer()
             await interaction.channel.purge(limit=1)
-
             embed = discord.Embed(title='Random Picker',description='Tempo para participar esgotado, os administradores irão começar a sortear logo.', color=discord.Color.from_rgb(47, 49, 54))
             await interaction.channel.send(embed=embed)
             with open('cogs/coreano/members.json', 'w') as f:
@@ -58,46 +65,54 @@ class MenuOnline(discord.ui.View):
 class RandomPicker(commands.Cog):
     def __init__(self, client:commands.Bot):
         self.client = client
-        #setpicker
+        #config
         self.titulo = "Título"
         self.descricao = "Descrição"
+        self.tempo = 15
         #sortear
         self.already = []
         self.auth = 0
 
-
+            
+    # Setup Picker DESCONTINUADO
     @app_commands.command(name='setuppicker', description='Setup para o Random Picker.')
     async def setuppicker(self, interaction: discord.Interaction):
         await interaction.response.send_message("Setup do Random Picker criado com sucesso.", ephemeral=True)
         embed = discord.Embed(title='Random Picker', description='Atualmente o Random Picker está offline, aguarde até um moderador iniciar.', color=discord.Color.from_rgb(47, 49, 54))
         #embed.set_author(icon_url='https://i.imgur.com/fwJ50Qh.png', name='Ponto Automático LBPD')
         await interaction.channel.send(embed=embed, view=MenuOnline())
-
-    @app_commands.command(name='picker', description='Iniciar o Random Picker.')
-    @app_commands.describe(titulo='Título da mensagem', descricao='Descrição da mensagem')
-    async def picker(self, interaction: discord.Interaction, titulo: str = None, descricao: str = None):
-        await interaction.response.send_message("Random Picker criado com sucesso.", ephemeral=True)
-        if titulo == "0" or titulo == None:
-            titulo = self.titulo
-        if descricao == "0" or descricao == None:
-            descricao = self.descricao
-        embed = discord.Embed(title=f'{titulo}'.title(), description=f'{descricao}'.capitalize(), color=discord.Color.from_rgb(47, 49, 54))
-        await interaction.channel.send(embed=embed, view=MenuOffline())
-
-    @app_commands.command(name='setpicker', description='Definir opções para o comando Picker')
-    @app_commands.describe(titulo='Definir título padrão', descricao='Definir descrição padrão')
-    async def setpicker(self, interaction: discord.Interaction, titulo: str = None, descricao: str = None):
+    
+    # Config
+    @app_commands.command(name='config', description='Definir opções para o comando Picker')
+    @app_commands.describe(titulo='Definir título padrão do /picker', descricao='Definir descrição padrão do /picker', tempo='Definir tempo para resgate (segundos) do /sortear.')
+    async def config(self, interaction: discord.Interaction, titulo: str = None, descricao: str = None, tempo: int = None):
         attributes = dict(list(locals().items())[2:])
         for k, v in attributes.items():
             if (v) != None:
                 vars(self)[k] = v   
         await interaction.response.send_message(f'Definições padrões atualizadas com sucesso.', ephemeral=True)
 
-    @app_commands.command(name='sortear', description="Criará um canal com as pessoas sorteadas.")
-    @app_commands.describe(qtd='Quantidade que será sorteada.', key='Chave que será sorteada.')
+    # Picker
+    @app_commands.command(name='picker', description='Iniciar o Random Picker.')
+    @app_commands.describe(titulo='Título da mensagem', descricao='Descrição da mensagem')
+    async def picker(self, interaction: discord.Interaction, titulo: str = None, descricao: str = None):
+        if titulo == "0" or titulo == None:
+            titulo = self.titulo
+        if descricao == "0" or descricao == None:
+            descricao = self.descricao
+        embed = discord.Embed(title=f'{titulo}'.title(), description=f'{descricao}'.capitalize(), color=discord.Color.from_rgb(47, 49, 54))
+        embed.set_footer(text="Participantes: 0")
+        msg = await interaction.channel.send(embed=embed)
+        await interaction.channel.send(view=MenuOffline(titulo=titulo, descricao=descricao, msg=msg))
+        await interaction.response.send_message("Random Picker criado com sucesso.", ephemeral=True)
+
+    # Sortear
+    @app_commands.command(name='sortear', description="Criará um canal para as pessoas sorteadas.")
+    @app_commands.describe(qtd='Quantidade de membros sorteados.', key='Chave que será sorteada.')
     async def sortear(self, interaction:discord.Interaction, qtd: int, key: str):
         with open ('cogs/coreano/members.json', 'r') as f:
             data = json.load(f)
+
         # Sortear
         chosen = []
         for i in range(0, qtd):
@@ -112,6 +127,7 @@ class RandomPicker(commands.Cog):
                 chosen.append(n)
                 self.already.append(n)
         #print(f'Chosen: {chosen}\nAlready: {self.already}')
+
         # Mensagens do Sistema
         if qtd == len(data) and self.auth == 0:
             await interaction.response.send_message(f'Quantidade: {len(chosen)}\nChave: {key}',ephemeral=True)
@@ -125,6 +141,7 @@ class RandomPicker(commands.Cog):
             self.auth = 1
         else:
             await interaction.response.send_message(f'Quantidade: {len(chosen)}\nChave: {key}',ephemeral=True)
+
         # Criação do Canal de Texto
         thread = await interaction.channel.create_thread(name='sorteio')
         for c in chosen:
@@ -135,13 +152,10 @@ class RandomPicker(commands.Cog):
         msg = await thread.send('A sala será deletada em 15 segundos')
         await thread.send(embed=code)
         await msg.edit(content='A sala será deletada em 15 segundos')
-        for i in range(0, 16):
+        for i in range(0, (self.tempo - 1)):
             await asyncio.sleep(1)
-            await msg.edit(content=f'A sala será deletada em {15-i} segundos')
+            await msg.edit(content=f'A sala será deletada em {self.tempo-i} segundos')
         await thread.delete()
-
-
 
 async def setup(client:commands.Bot) -> None:
     await client.add_cog(RandomPicker(client))
-
