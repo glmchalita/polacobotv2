@@ -20,7 +20,7 @@ class Client(commands.Bot):
     async def setup_hook(self) -> None:
         self.add_view(ponto.Menu())
         self.add_view(help_center.DropdownView())
-        self.add_view(random.MenuOffline()) # Remover depois
+        #self.add_view(random.MenuOffline(titulo=None, descricao=None, msg=None)) # Remover depois
         self.add_view(random.MenuOnline())
         for ext in self.cogslist:
             await self.load_extension(ext)
