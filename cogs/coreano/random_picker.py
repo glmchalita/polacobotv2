@@ -5,7 +5,7 @@ import json
 import random
 import asyncio
 
-lang = "en_us"
+lang = "pt_br"
 with open(f"lang/{lang}.json", "r", encoding='utf-8') as file:
     label = json.load(file)
 
@@ -54,22 +54,25 @@ class Buttons(discord.ui.View):
 class RandomPicker(commands.Cog):
     def __init__(self, client:commands.Bot):
         self.client = client
-        #Config
-        self.title = f"{label['random_picker_title']}"
-        self.description = f"{label['random_picker_description']}"
-        self.time = 15
         #Sorteio
         self.already = []
         self.auth = 0
+        with open("config.json", "r") as file:
+            self.data = json.load(file)
+            self.picker_title = self.data["picker_title"]
+            self.picker_description = self.data["picker_description"]
+            self.draw_time = self.data["draw_time"]
     
     # Config
     @app_commands.command(name="config", description=f"{label['config_command_description']}")
-    @app_commands.describe(title=f"{label['config_describe_title']}", description=f"{label['config_describe_description']}", time=f"{label['config_describe_time']}")
-    async def config(self, interaction: discord.Interaction, title: str = None, description: str = None, time: int = None):
+    @app_commands.describe(picker_title=f"{label['config_describe_title']}", picker_description=f"{label['config_describe_description']}", draw_time=f"{label['config_describe_time']}")
+    async def config(self, interaction: discord.Interaction, picker_title: str = None, picker_description: str = None, draw_time: int = None):
         attributes = dict(list(locals().items())[2:])
         for k, v in attributes.items():
             if (v) != None:
-                vars(self)[k] = v   
+                self.data[k] = v
+                with open("config.json", "w") as file:
+                    json.dump(self.data, file, ensure_ascii=False, indent=4)
         await interaction.response.send_message(f"{label['config_response_1']}", ephemeral=True)
 
     # Picker
@@ -77,9 +80,9 @@ class RandomPicker(commands.Cog):
     @app_commands.describe(title=f"{label['picker_describe_title']}", description=f"{label['picker_describe_description']}")
     async def picker(self, interaction: discord.Interaction, title: str = None, description: str = None):
         if title == "0" or title == None:
-            title = self.title
+            title = self.picker_title
         if description == "0" or description == None:
-            description = self.description
+            description = self.picker_description
 
         embed = discord.Embed(title=f"{title}".title(), description=f"{description}".capitalize(), color=discord.Color.from_rgb(47, 49, 54))
         embed.set_footer(text=f"{label['picker_footer']}")
@@ -90,10 +93,10 @@ class RandomPicker(commands.Cog):
 
         await interaction.response.send_message(f"{label['picker_response_1']}", ephemeral=True)
 
-    # Raffle
-    @app_commands.command(name="raffle", description=f"{label['raffle_command_description']}")
-    @app_commands.describe(qty=f"{label['raffle_describe_qty']}", key=f"{label['raffle_describe_key']}")
-    async def raffle(self, interaction:discord.Interaction, qty: int, key: str):
+    # Draw
+    @app_commands.command(name="draw", description=f"{label['draw_command_description']}")
+    @app_commands.describe(qty=f"{label['draw_describe_qty']}", key=f"{label['draw_describe_key']}")
+    async def draw(self, interaction:discord.Interaction, qty: int, key: str):
         with open ("cogs/coreano/members.json", "r") as file:
             data = json.load(file)
 
@@ -113,31 +116,31 @@ class RandomPicker(commands.Cog):
 
         # Mensagens do Sistema
         if qty == len(data) and self.auth == 0:
-            await interaction.response.send_message(f"{label['raffle_response_qty']}: {len(chosen)}\n{label['raffle_response_key']}: {key}",ephemeral=True)
-            await interaction.followup.send(f"{label['raffle_response_all']}",ephemeral=True)
+            await interaction.response.send_message(f"{label['draw_response_qty']}: {len(chosen)}\n{label['draw_response_key']}: {key}",ephemeral=True)
+            await interaction.followup.send(f"{label['draw_response_all']}",ephemeral=True)
             self.auth = 1
         elif len(self.already) == len(data) and self.auth == 1:
-            await interaction.response.send_message(f"{label['raffle_response_all']}.",ephemeral=True)
+            await interaction.response.send_message(f"{label['draw_response_all']}.",ephemeral=True)
         elif len(self.already) == len(data) and self.auth == 0:
-            await interaction.response.send_message(f"{label['raffle_response_qty']}: {len(chosen)}\n{label['raffle_response_key']}: {key}",ephemeral=True)
-            await interaction.followup.send(f"{label['raffle_response_all']}.",ephemeral=True)
+            await interaction.response.send_message(f"{label['draw_response_qty']}: {len(chosen)}\n{label['draw_response_key']}: {key}",ephemeral=True)
+            await interaction.followup.send(f"{label['draw_response_all']}.",ephemeral=True)
             self.auth = 1
         else:
-            await interaction.response.send_message(f"{label['raffle_response_qty']}: {len(chosen)}\n{label['raffle_response_key']}: {key}",ephemeral=True)
+            await interaction.response.send_message(f"{label['draw_response_qty']}: {len(chosen)}\n{label['draw_response_key']}: {key}",ephemeral=True)
 
         # Criação do Canal de Texto
-        thread = await interaction.channel.create_thread(name=f"{label['raffle_thread_name']}")
+        thread = await interaction.channel.create_thread(name=f"{label['draw_thread_name']}")
         for c in chosen:
             user = await interaction.guild.fetch_member(data[f"{c}"]["member"])
             await thread.add_user(user)
         code = discord.Embed(color=discord.Color.from_rgb(47, 49, 54))
         code.add_field(name="", value=f"{key}")
-        msg = await thread.send(f"{label['raffle_thread_warning']}")
+        msg = await thread.send(f"{label['draw_thread_warning']}")
         await thread.send(embed=code)
-        await msg.edit(content=f"{label['raffle_thread_warning']}")
+        await msg.edit(content=f"{label['draw_thread_warning']}")
         for i in range(0, (self.time - 1)):
             await asyncio.sleep(1)
-            await msg.edit(content=f"{label['raffle_thread_text']} {self.time-i} {label['raffle_thread_time']}")
+            await msg.edit(content=f"{label['draw_thread_text']} {self.draw_time-i} {label['draw_thread_time']}")
         await thread.delete()
 
 async def setup(client:commands.Bot) -> None:
