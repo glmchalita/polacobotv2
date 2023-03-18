@@ -13,19 +13,17 @@ class Buttons(discord.ui.View):
     def __init__(self, title = None, description = None, embed = None):
         super().__init__(timeout=None)
         self.members = {}
-        self.queue = []
         self.count = 0
         self.title = title
         self.description = description
         self.embed_msg = embed
 
-    # join_
+    # join
     @discord.ui.button(emoji="🐸", label=f"{label['join_label']}", style=discord.ButtonStyle.grey, custom_id="persistent_view:button_join")
     async def join(self, interaction: discord.Interaction, button: discord.ui.Button):
         
-        if not int(interaction.user.id) in self.queue:
-            self.members[self.count] = {"member":int(interaction.user.id)}
-            self.queue.append(int(interaction.user.id))
+        if not int(interaction.user.id) in self.members.values():
+            self.members["member"] = interaction.user.id
             self.count = self.count + 1
 
             new_embed = discord.Embed(title=f"{self.title}".title(), description=f"{self.description}".capitalize(), color=discord.Color.from_rgb(47, 49, 54))
@@ -33,7 +31,8 @@ class Buttons(discord.ui.View):
             await self.embed_msg.edit(embed=new_embed)
 
             await interaction.response.send_message(f"{label['join_response_1']}", ephemeral=True)   
-        elif int(interaction.user.id) in self.queue:
+            
+        elif int(interaction.user.id) in self.members.values():
             await interaction.response.send_message(f"{label['join_response_2']}", ephemeral=True)
 
     @discord.ui.button(emoji="❌", label=f"{label['close_label']}", style=discord.ButtonStyle.grey, custom_id="persistent_view:button_close")
