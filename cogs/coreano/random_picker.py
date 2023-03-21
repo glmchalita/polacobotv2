@@ -23,7 +23,7 @@ class Buttons(discord.ui.View):
     async def join(self, interaction: discord.Interaction, button: discord.ui.Button):
         
         if not int(interaction.user.id) in self.members.values():
-            self.members["member"] = interaction.user.id
+            self.members[f"member{self.count}"] = interaction.user.id
             self.count = self.count + 1
 
             new_embed = discord.Embed(title=f"{self.title}".title(), description=f"{self.description}".capitalize(), color=discord.Color.from_rgb(47, 49, 54))
@@ -31,7 +31,7 @@ class Buttons(discord.ui.View):
             await self.embed_msg.edit(embed=new_embed)
 
             await interaction.response.send_message(f"{label['join_response_1']}", ephemeral=True)   
-            
+
         elif int(interaction.user.id) in self.members.values():
             await interaction.response.send_message(f"{label['join_response_2']}", ephemeral=True)
 
@@ -54,7 +54,6 @@ class RandomPicker(commands.Cog):
     def __init__(self, client:commands.Bot):
         self.client = client
         #Sorteio
-        self.already = []
         self.auth = 0
         with open("config.json", "r") as file:
             self.data = json.load(file)
@@ -97,47 +96,50 @@ class RandomPicker(commands.Cog):
     @app_commands.describe(qty=f"{label['draw_describe_qty']}", key=f"{label['draw_describe_key']}")
     async def draw(self, interaction:discord.Interaction, qty: int, key: str):
         with open ("cogs/coreano/members.json", "r") as file:
-            data = json.load(file)
+            queue = json.load(file)
 
         # Sorteio
-        chosen = []
+        drawn_number = []
+        drawn_member = []
         for i in range(0, qty):
-            n = random.randint(0, (len(data)-1))
-            while n in self.already:
-                if len(self.already) == len(data):
+            n = random.randint(0, (len(queue)-1))
+            while n in drawn_number:
+                if len(drawn_number) == len(queue):
                         break
-                n = random.randint(0, (len(data)-1))
-                while n in chosen:
-                    n = random.randint(0, (len(data)-1))
+                n = random.randint(0, (len(queue)-1))
+                while n in drawn_member:
+                    n = random.randint(0, (len(queue)-1))
             else:
-                chosen.append(n)
-                self.already.append(n)
+                drawn_number.append(n)
+                drawn_member.append(n)
 
         # Mensagens do Sistema
-        if qty == len(data) and self.auth == 0:
-            await interaction.response.send_message(f"{label['draw_response_qty']}: {len(chosen)}\n{label['draw_response_key']}: {key}",ephemeral=True)
+        if qty == len(queue) and self.auth == 0:
+            await interaction.response.send_message(f"{label['draw_response_qty']}: {len(drawn_member)}\n{label['draw_response_key']}: {key}",ephemeral=True)
             await interaction.followup.send(f"{label['draw_response_all']}",ephemeral=True)
             self.auth = 1
-        elif len(self.already) == len(data) and self.auth == 1:
+        elif len(drawn_number) == len(queue) and self.auth == 1:
             await interaction.response.send_message(f"{label['draw_response_all']}.",ephemeral=True)
-        elif len(self.already) == len(data) and self.auth == 0:
-            await interaction.response.send_message(f"{label['draw_response_qty']}: {len(chosen)}\n{label['draw_response_key']}: {key}",ephemeral=True)
+        elif len(drawn_number) == len(queue) and self.auth == 0:
+            await interaction.response.send_message(f"{label['draw_response_qty']}: {len(drawn_member)}\n{label['draw_response_key']}: {key}",ephemeral=True)
             await interaction.followup.send(f"{label['draw_response_all']}.",ephemeral=True)
             self.auth = 1
         else:
-            await interaction.response.send_message(f"{label['draw_response_qty']}: {len(chosen)}\n{label['draw_response_key']}: {key}",ephemeral=True)
+            await interaction.response.send_message(f"{label['draw_response_qty']}: {len(drawn_member)}\n{label['draw_response_key']}: {key}",ephemeral=True)
 
         # Criação do Canal de Texto
         thread = await interaction.channel.create_thread(name=f"{label['draw_thread_name']}")
-        for c in chosen:
-            user = await interaction.guild.fetch_member(data[f"{c}"]["member"])
+        for number in drawn_member:
+            user = await interaction.guild.fetch_member(queue[f"member{number}"])
             await thread.add_user(user)
+            
         code = discord.Embed(color=discord.Color.from_rgb(47, 49, 54))
         code.add_field(name="", value=f"{key}")
-        msg = await thread.send(f"{label['draw_thread_warning']}")
+
+        msg = await thread.send(f"{label['draw_thread_text']} {self.draw_time} {label['draw_thread_time']}")
         await thread.send(embed=code)
-        await msg.edit(content=f"{label['draw_thread_warning']}")
-        for i in range(0, (self.time - 1)):
+
+        for i in range(0, (self.draw_time - 1)):
             await asyncio.sleep(1)
             await msg.edit(content=f"{label['draw_thread_text']} {self.draw_time-i} {label['draw_thread_time']}")
         await thread.delete()
